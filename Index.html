@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tabungan Menuju Akad &amp; Resepsi — Fajar Sidiq &amp; Selviana Nurhidayah</title>
+
+  <!-- Google Fonts: Cormorant Garamond & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ivory: '#FAF7F2',
+            cream: '#F3EDE2',
+            sage: {
+              DEFAULT: '#5C7A67',
+              dark: '#465F4F',
+              light: '#E8EFEA'
+            },
+            champagne: {
+              DEFAULT: '#C59B6D',
+              dark: '#A47D52',
+              light: '#F6EFE6'
+            },
+            terracotta: {
+              DEFAULT: '#B86B52',
+              dark: '#97523C',
+              light: '#F8ECE8'
+            },
+            ink: {
+              DEFAULT: '#2A2420',
+              muted: '#6E6259',
+              subtle: '#9C8F84'
+            },
+            line: '#E6DDD0'
+          },
+          fontFamily: {
+            serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+            sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Chart.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background-color: #FAF7F2;
+      color: #2A2420;
+    }
+    h1, h2, h3, .font-display {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    .card-warm {
+      background: #FFFFFF;
+      border: 1px solid #E6DDD0;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px -18px rgba(42, 36, 32, 0.16);
+    }
+    @keyframes fadeToast {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .toast-enter {
+      animation: fadeToast 0.22s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-ivory text-ink antialiased selection:bg-champagne/25">
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-[90] flex flex-col gap-2 max-w-sm w-[calc(100%-2rem)] sm:w-auto pointer-events-none"></div>
+
+  <!-- Reusable Modal -->
+  <div id="modal-backdrop" class="hidden fixed inset-0 z-[80] bg-ink/50 backdrop-blur-xs flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="bg-ivory border border-line rounded-3xl shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+      <div class="px-6 py-4 bg-white border-b border-line flex items-center justify-between shrink-0">
+        <h3 id="modal-title" class="font-display text-2xl font-bold text-ink">Modal</h3>
+        <button type="button" onclick="WeddingSavings.closeModal()" class="w-9 h-9 rounded-full hover:bg-cream flex items-center justify-center text-ink-muted hover:text-ink transition" aria-label="Tutup">✕</button>
+      </div>
+      <div id="modal-body" class="p-6 overflow-y-auto space-y-4"></div>
+    </div>
+  </div>
+
+  <!-- Top Utility Bar (Kode Pasangan, Cloud Sync, Backup) -->
+  <div class="border-b border-line bg-white/85 backdrop-blur-md sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <button type="button" onclick="WeddingSavings.openCoupleSpaceModal()" class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cream hover:bg-champagne-light border border-line text-xs font-semibold text-ink transition">
+          <span>💍</span>
+          <span>Kode Pasangan:</span>
+          <span id="top-couple-code" class="font-mono text-sage-dark uppercase">FAJAR-SELVI-2026</span>
+        </button>
+
+        <button type="button" id="cloud-status-btn" onclick="WeddingSavings.openCloudModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition">
+          <span id="cloud-dot" class="w-2 h-2 rounded-full bg-champagne"></span>
+          <span id="cloud-label">Mode Lokal (Sinkron Antar-Tab)</span>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <button type="button" onclick="WeddingSavings.openTxModal('deposit')" class="px-3.5 py-1.5 rounded-xl bg-sage hover:bg-sage-dark text-white text-xs font-semibold shadow-xs transition">
+          + Catat Tabungan
+        </button>
+        <button type="button" onclick="WeddingSavings.openTxModal('expense')" class="px-3.5 py-1.5 rounded-xl bg-terracotta hover:bg-terracotta-dark text-white text-xs font-semibold shadow-xs transition">
+          - Catat Pengeluaran
+        </button>
+        <button type="button" onclick="WeddingSavings.exportJSON()" class="px-3 py-1.5 rounded-xl bg-white hover:bg-cream border border-line text-xs font-medium text-ink transition">
+          Export JSON
+        </button>
+        <label class="px-3 py-1.5 rounded-xl bg-white hover:bg-cream border border-line text-xs font-medium text-ink cursor-pointer transition">
+          Import JSON
+          <input type="file" accept=".json,application/json" onchange="WeddingSavings.importJSON(this)" class="hidden" />
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Layout Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-7">
+
+    <!-- ==================== 1. SHARED COUPLE HEADER & COUNTDOWN ==================== -->
+    <section class="card-warm p-6 sm:p-8 bg-gradient-to-br from-white via-ivory to-champagne-light/60 relative overflow-hidden">
+      <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+        <div class="space-y-2.5 max-w-2xl">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sage-light text-sage-dark text-xs font-semibold tracking-wide">
+            <span>♥</span>
+            <span>Our Wedding Fund • Tabungan Menuju Akad &amp; Resepsi</span>
+          </div>
+          <h1 id="hero-couple-names" class="font-display text-3xl sm:text-5xl font-bold text-ink leading-tight">
+            Fajar Sidiq &amp; Selviana Nurhidayah
+          </h1>
+          <p class="text-sm text-ink-muted flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>Target Hari Bahagia: <strong id="hero-wedding-date-text" class="text-ink">-</strong></span>
+            <span class="text-line">•</span>
+            <span id="hero-estimate-date" class="text-sage-dark font-medium">Estimasi tercapai: -</span>
+          </p>
+          <div class="pt-1 flex flex-wrap gap-2">
+            <button type="button" onclick="WeddingSavings.openPlanSettingsModal()" class="px-3.5 py-2 rounded-xl bg-white hover:bg-cream border border-line text-xs font-semibold text-ink transition">
+              ✎ Edit Nama Pasangan, Tanggal &amp; Target
+            </button>
+            <button type="button" onclick="WeddingSavings.openPosModal()" class="px-3.5 py-2 rounded-xl bg-champagne hover:bg-champagne-dark text-white text-xs font-semibold transition">
+              + Tambah Pos Anggaran
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Countdown: Bulan, Hari, Jam -->
+        <div class="grid grid-cols-3 gap-2.5 sm:gap-3 shrink-0 self-start w-full sm:w-auto">
+          <div class="bg-white border border-line rounded-2xl px-4 py-3 text-center min-w-[84px] shadow-2xs">
+            <div id="cd-months" class="font-display text-3xl sm:text-4xl font-bold text-champagne-dark tabular-nums">00</div>
+            <div class="text-[11px] uppercase tracking-wider text-ink-muted font-medium mt-0.5">Bulan</div>
+          </div>
+          <div class="bg-white border border-line rounded-2xl px-4 py-3 text-center min-w-[84px] shadow-2xs">
+            <div id="cd-days" class="font-display text-3xl sm:text-4xl font-bold text-sage-dark tabular-nums">00</div>
+            <div class="text-[11px] uppercase tracking-wider text-ink-muted font-medium mt-0.5">Hari</div>
+          </div>
+          <div class="bg-white border border-line rounded-2xl px-4 py-3 text-center min-w-[84px] shadow-2xs">
+            <div id="cd-hours" class="font-display text-3xl sm:text-4xl font-bold text-terracotta-dark tabular-nums">00</div>
+            <div class="text-[11px] uppercase tracking-wider text-ink-muted font-medium mt-0.5">Jam</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Overall Savings vs Target Progress -->
+      <div class="mt-7 pt-6 border-t border-line/80 space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+          <div>
+            <span class="text-xs uppercase tracking-wider font-semibold text-ink-muted">Saldo Tabungan Bersih Saat Ini</span>
+            <div class="flex items-baseline gap-2.5 flex-wrap mt-0.5">
+              <span id="hero-net-saved" class="text-2xl sm:text-3xl font-bold text-ink tabular-nums">Rp 0</span>
+              <span id="hero-target-caption" class="text-xs sm:text-sm text-ink-muted tabular-nums">dari target Rp 0</span>
+            </div>
+          </div>
+          <div class="text-left sm:text-right">
+            <span id="hero-progress-pct" class="font-display text-3xl font-bold text-sage-dark tabular-nums">0%</span>
+            <p id="hero-remaining-text" class="text-xs text-ink-muted tabular-nums">Kekurangan: Rp 0</p>
+          </div>
+        </div>
+
+        <div class="w-full h-3.5 rounded-full bg-cream border border-line/70 overflow-hidden">
+          <div id="hero-progress-bar" class="h-full rounded-full bg-gradient-to-r from-sage to-champagne transition-all duration-500" style="width: 0%"></div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted pt-0.5">
+          <span id="hero-gross-expense-info" class="tabular-nums">Total Setoran: Rp 0 • Total Pengeluaran: Rp 0</span>
+          <span id="hero-avg-monthly-info" class="tabular-nums">Rata-rata setoran bulanan: Rp 0/bln</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 2. PARTNER CONTRIBUTION SPLIT & QUICK FORM ==================== -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <!-- Partner 1 Card -->
+      <div class="lg:col-span-4 card-warm p-5 sm:p-6 flex flex-col justify-between space-y-4">
+        <div class="space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-sage-dark">Kontribusi Pasangan 1</span>
+            <span id="p1-share-badge" class="px-2.5 py-0.5 rounded-full bg-sage-light text-sage-dark text-xs font-bold tabular-nums">0%</span>
+          </div>
+          <h2 id="p1-name-label" class="font-display text-2xl font-bold text-ink">Fajar Sidiq</h2>
+        </div>
+        <div class="space-y-2">
+          <div id="p1-deposit-total" class="text-2xl font-bold text-ink tabular-nums">Rp 0</div>
+          <div class="w-full h-2.5 rounded-full bg-cream overflow-hidden">
+            <div id="p1-share-bar" class="h-full bg-sage rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <p id="p1-tx-count" class="text-xs text-ink-muted tabular-nums">0 kali setoran</p>
+        </div>
+      </div>
+
+      <!-- Partner 2 Card -->
+      <div class="lg:col-span-4 card-warm p-5 sm:p-6 flex flex-col justify-between space-y-4">
+        <div class="space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-champagne-dark">Kontribusi Pasangan 2</span>
+            <span id="p2-share-badge" class="px-2.5 py-0.5 rounded-full bg-champagne-light text-champagne-dark text-xs font-bold tabular-nums">0%</span>
+          </div>
+          <h2 id="p2-name-label" class="font-display text-2xl font-bold text-ink">Selviana Nurhidayah</h2>
+        </div>
+        <div class="space-y-2">
+          <div id="p2-deposit-total" class="text-2xl font-bold text-ink tabular-nums">Rp 0</div>
+          <div class="w-full h-2.5 rounded-full bg-cream overflow-hidden">
+            <div id="p2-share-bar" class="h-full bg-champagne rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <p id="p2-tx-count" class="text-xs text-ink-muted tabular-nums">0 kali setoran</p>
+        </div>
+      </div>
+
+      <!-- Quick Inline Catat Tabungan / Pengeluaran Card -->
+      <div class="lg:col-span-4 card-warm p-5 sm:p-6 bg-cream/45">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-display text-xl font-bold text-ink">Catat Cepat</h3>
+          <span id="joint-deposit-note" class="text-[11px] font-medium text-ink-muted tabular-nums">Bersama: Rp 0</span>
+        </div>
+
+        <form onsubmit="WeddingSavings.handleInlineQuickSubmit(event)" class="space-y-2.5">
+          <div class="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-white border border-line">
+            <label class="cursor-pointer">
+              <input type="radio" name="quick-type" value="deposit" checked class="peer sr-only" />
+              <div class="py-1.5 rounded-lg text-center text-xs font-semibold text-ink-muted peer-checked:bg-sage peer-checked:text-white transition">
+                + Tabungan
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="quick-type" value="expense" class="peer sr-only" />
+              <div class="py-1.5 rounded-lg text-center text-xs font-semibold text-ink-muted peer-checked:bg-terracotta peer-checked:text-white transition">
+                - Pengeluaran
+              </div>
+            </label>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <select id="quick-actor" class="w-full px-3 py-2 rounded-xl bg-white border border-line text-xs font-medium text-ink focus:outline-none focus:border-sage">
+              <!-- Populated dynamically -->
+            </select>
+            <select id="quick-pos" class="w-full px-3 py-2 rounded-xl bg-white border border-line text-xs font-medium text-ink focus:outline-none focus:border-sage">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <input type="number" min="1" step="any" id="quick-amount" required placeholder="Nominal (Rp)" class="w-full px-3 py-2 rounded-xl bg-white border border-line text-xs font-semibold text-ink tabular-nums focus:outline-none focus:border-sage" />
+            <input type="date" id="quick-date" required class="w-full px-3 py-2 rounded-xl bg-white border border-line text-xs text-ink focus:outline-none focus:border-sage" />
+          </div>
+
+          <div class="flex gap-2">
+            <input type="text" id="quick-note" placeholder="Catatan singkat (opsional)" class="flex-1 px-3 py-2 rounded-xl bg-white border border-line text-xs text-ink focus:outline-none focus:border-sage" />
+            <button type="submit" class="px-4 py-2 rounded-xl bg-ink hover:bg-ink/90 text-white text-xs font-semibold shrink-0 transition">
+              Simpan
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ==================== 3. WEDDING BUDGET POS / MILESTONES TRACKER ==================== -->
+    <section class="space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="font-display text-2xl sm:text-3xl font-bold text-ink">Pos Anggaran &amp; Target Pernikahan</h2>
+          <p class="text-xs sm:text-sm text-ink-muted">Pantau alokasi dana per pos persiapan, ubah target, atau klik pos untuk melihat riwayat transaksinya.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" id="clear-pos-filter-btn" onclick="WeddingSavings.clearPosFilter()" class="hidden px-3 py-1.5 rounded-xl bg-cream hover:bg-line/60 text-xs font-semibold text-ink transition">
+            ✕ Tampilkan Semua Pos
+          </button>
+          <button type="button" onclick="WeddingSavings.openPosModal()" class="px-4 py-2 rounded-xl bg-white hover:bg-cream border border-line text-xs font-semibold text-ink transition">
+            + Tambah Pos Baru
+          </button>
+        </div>
+      </div>
+
+      <div id="pos-cards-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+    </section>
+
+    <!-- ==================== 4. ANALYTICS CHARTS (CHART.JS) ==================== -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <div class="lg:col-span-7 card-warm p-5 sm:p-6 space-y-3">
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <h3 class="font-display text-2xl font-bold text-ink">Grafik Pertumbuhan Tabungan</h3>
+            <p class="text-xs text-ink-muted">Akumulasi tabungan bersih dari waktu ke waktu menuju target anggaran</p>
+          </div>
+          <span class="px-2.5 py-1 rounded-full bg-sage-light text-sage-dark text-[11px] font-semibold">Kumulatif IDR</span>
+        </div>
+        <div class="h-64 sm:h-72 relative">
+          <canvas id="growth-chart"></canvas>
+        </div>
+      </div>
+
+      <div class="lg:col-span-5 card-warm p-5 sm:p-6 space-y-3">
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <h3 class="font-display text-2xl font-bold text-ink">Porsi Kontribusi &amp; Pos</h3>
+            <p class="text-xs text-ink-muted">Perbandingan setoran pasangan vs alokasi pos</p>
+          </div>
+          <div class="flex rounded-lg bg-cream p-0.5 border border-line text-[11px] font-semibold">
+            <button type="button" id="breakdown-mode-partner" onclick="WeddingSavings.setBreakdownMode('partner')" class="px-2.5 py-1 rounded-md bg-white text-ink shadow-2xs">Pasangan</button>
+            <button type="button" id="breakdown-mode-pos" onclick="WeddingSavings.setBreakdownMode('pos')" class="px-2.5 py-1 rounded-md text-ink-muted hover:text-ink">Per Pos</button>
+          </div>
+        </div>
+        <div class="h-64 sm:h-72 relative">
+          <canvas id="breakdown-chart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 5. TRANSACTION HISTORY LEDGER ==================== -->
+    <section class="card-warm p-5 sm:p-6 space-y-4">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div>
+          <h2 class="font-display text-2xl sm:text-3xl font-bold text-ink">Riwayat Setoran &amp; Pengeluaran</h2>
+          <p id="ledger-filter-summary" class="text-xs text-ink-muted">Menampilkan seluruh catatan tabungan dan pengeluaran</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+          <input id="tx-search" type="search" oninput="WeddingSavings.renderTransactions()" placeholder="Cari catatan / pos..." class="px-3 py-2 rounded-xl bg-ivory border border-line text-xs text-ink focus:outline-none focus:border-sage" />
+          <select id="tx-filter-type" onchange="WeddingSavings.renderTransactions()" class="px-3 py-2 rounded-xl bg-ivory border border-line text-xs font-medium text-ink focus:outline-none focus:border-sage">
+            <option value="ALL">Semua Jenis</option>
+            <option value="deposit">Setoran (+ Tabungan)</option>
+            <option value="expense">Pengeluaran (- Dana)</option>
+          </select>
+          <select id="tx-filter-actor" onchange="WeddingSavings.renderTransactions()" class="px-3 py-2 rounded-xl bg-ivory border border-line text-xs font-medium text-ink focus:outline-none focus:border-sage">
+            <option value="ALL">Semua Kontributor</option>
+          </select>
+          <select id="tx-filter-pos" onchange="WeddingSavings.renderTransactions()" class="px-3 py-2 rounded-xl bg-ivory border border-line text-xs font-medium text-ink focus:outline-none focus:border-sage">
+            <option value="ALL">Semua Pos Anggaran</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse min-w-[680px]">
+          <thead>
+            <tr class="border-b border-line text-[11px] uppercase tracking-wider text-ink-muted">
+              <th class="py-3 px-3">Tanggal</th>
+              <th class="py-3 px-3">Jenis</th>
+              <th class="py-3 px-3">Oleh</th>
+              <th class="py-3 px-3">Pos Anggaran</th>
+              <th class="py-3 px-3">Catatan</th>
+              <th class="py-3 px-3 text-right">Nominal</th>
+              <th class="py-3 px-3 text-right">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tx-table-body" class="divide-y divide-line/60 text-sm"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // ==================== CONFIGURATION & SEED DATA ====================
+      const STORAGE_PREFIX = 'wedding_fund_fajar_selvi_v1_';
+      const ACTIVE_CODE_KEY = 'wedding_fund_active_code_v1';
+      const CLOUD_CFG_KEY = 'wedding_fund_cloud_cfg_v1';
+      const DEFAULT_COUPLE_CODE = 'FAJAR-SELVI-2026';
+
+      const DEFAULT_POS = [
+        { id: 'pos_gedung', name: 'Gedung & Catering', target: 75000000 },
+        { id: 'pos_dekor', name: 'Dekorasi & Dokumentasi', target: 28000000 },
+        { id: 'pos_busana', name: 'Busana & MUA', target: 18000000 },
+        { id: 'pos_cincin', name: 'Cincin & Seserahan', target: 12000000 },
+        { id: 'pos_undangan', name: 'Undangan & Souvenir', target: 7000000 },
+        { id: 'pos_darurat', name: 'Dana Darurat Nikah', target: 10000000 }
+      ];
+
+      function createSeedData() {
+        return {
+          updatedAt: Date.now(),
+          partner1: 'Fajar Sidiq',
+          partner2: 'Selviana Nurhidayah',
+          weddingDate: '2027-05-15',
+          weddingTime: '08:00',
+          totalTarget: 150000000,
+          positions: DEFAULT_POS.map(p => ({ ...p })),
+          transactions: [
+            { id: 'tx_1', type: 'deposit', actor: 'Fajar Sidiq', posId: 'pos_gedung', amount: 18000000, date: '2026-08-10', note: 'Tabungan awal gajian & THR' },
+            { id: 'tx_2', type: 'deposit', actor: 'Selviana Nurhidayah', posId: 'pos_busana', amount: 12000000, date: '2026-08-25', note: 'Cicilan tabungan kebaya & MUA' },
+            { id: 'tx_3', type: 'deposit', actor: 'Bersama', posId: 'pos_dekor', amount: 10000000, date: '2026-09-15', note: 'Setoran bersama bulan September' },
+            { id: 'tx_4', type: 'deposit', actor: 'Fajar Sidiq', posId: 'pos_cincin', amount: 8500000, date: '2026-10-12', note: 'Tabungan cincin kawin & seserahan' },
+            { id: 'tx_5', type: 'deposit', actor: 'Selviana Nurhidayah', posId: 'pos_undangan', amount: 5500000, date: '2026-10-28', note: 'Alokasi souvenir & undangan' },
+            { id: 'tx_6', type: 'deposit', actor: 'Bersama', posId: 'pos_darurat', amount: 7500000, date: '2026-11-10', note: 'Dana cadangan persiapan nikah' },
+            { id: 'tx_7', type: 'expense', actor: 'Bersama', posId: 'pos_gedung', amount: 6500000, date: '2026-11-18', note: 'Booking fee survei & DP awal venue' }
+          ]
+        };
+      }
+
+      // ==================== APPLICATION STATE ====================
+      let coupleCode = loadCoupleCode();
+      let data = loadLocalData(coupleCode);
+      let cloudCfg = loadCloudConfig();
+      let selectedPosFilter = 'ALL';
+      let breakdownMode = 'partner';
+      let eventSource = null;
+      let pollTimer = null;
+      let isCloudConnected = false;
+      let isApplyingRemote = false;
+      let growthChartInstance = null;
+      let breakdownChartInstance = null;
+
+      function sanitizeCode(raw) {
+        const clean = (raw || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+        return clean || DEFAULT_COUPLE_CODE;
+      }
+
+      function loadCoupleCode() {
+        try {
+          const params = new URLSearchParams(window.location.search);
+          if (params.get('kode')) {
+            const c = sanitizeCode(params.get('kode'));
+            localStorage.setItem(ACTIVE_CODE_KEY, c);
+            return c;
+          }
+          const saved = localStorage.getItem(ACTIVE_CODE_KEY);
+          if (saved) return sanitizeCode(saved);
+        } catch (e) {}
+        return DEFAULT_COUPLE_CODE;
+      }
+
+      function storageKeyFor(code) {
+        return STORAGE_PREFIX + sanitizeCode(code);
+      }
+
+      function normalizeData(raw) {
+        const seed = createSeedData();
+        const positions = Array.isArray(raw?.positions) && raw.positions.length
+          ? raw.positions.map(p => ({
+              id: p.id || uid('pos'),
+              name: String(p.name || 'Pos Anggaran').trim(),
+              target: Math.max(0, Number(p.target) || 0)
+            }))
+          : seed.positions;
+
+        const validPosIds = new Set(positions.map(p => p.id));
+        const fallbackPosId = positions[0].id;
+
+        const transactions = Array.isArray(raw?.transactions)
+          ? raw.transactions.map(t => ({
+              id: t.id || uid('tx'),
+              type: t.type === 'expense' ? 'expense' : 'deposit',
+              actor: String(t.actor || 'Bersama'),
+              posId: validPosIds.has(t.posId) ? t.posId : fallbackPosId,
+              amount: Math.max(0, Number(t.amount) || 0),
+              date: t.date || new Date().toISOString().slice(0, 10),
+              note: String(t.note || '').trim()
+            }))
+          : seed.transactions;
+
+        return {
+          updatedAt: Number(raw?.updatedAt) || Date.now(),
+          partner1: String(raw?.partner1 || seed.partner1).trim() || seed.partner1,
+          partner2: String(raw?.partner2 || seed.partner2).trim() || seed.partner2,
+          weddingDate: raw?.weddingDate || seed.weddingDate,
+          weddingTime: raw?.weddingTime || seed.weddingTime,
+          totalTarget: Math.max(0, Number(raw?.totalTarget) || seed.totalTarget),
+          positions,
+          transactions
+        };
+      }
+
+      function loadLocalData(code) {
+        try {
+          const raw = localStorage.getItem(storageKeyFor(code));
+          if (raw) return normalizeData(JSON.parse(raw));
+        } catch (e) {}
+        const seeded = createSeedData();
+        try {
+          localStorage.setItem(storageKeyFor(code), JSON.stringify(seeded));
+        } catch (e) {}
+        return seeded;
+      }
+
+      function loadCloudConfig() {
+        try {
+          const raw = localStorage.getItem(CLOUD_CFG_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            return { databaseURL: String(parsed?.databaseURL || '').trim() };
+          }
+        } catch (e) {}
+        return { databaseURL: '' };
+      }
+
+      // ==================== FORMATTERS & HELPERS ====================
+      function uid(prefix) {
+        return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+      }
+
+      function esc(str) {
+        return String(str == null ? '' : str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function formatIDR(num) {
+        const val = Number(num) || 0;
+        return 'Rp ' + Math.round(val).toLocaleString('id-ID');
+      }
+
+      function formatDateID(dateStr) {
+        if (!dateStr) return '-';
+        const dt = new Date(dateStr + 'T00:00:00');
+        if (isNaN(dt.getTime())) return dateStr;
+        return dt.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      }
+
+      function formatShortDateID(dateStr) {
+        if (!dateStr) return '-';
+        const dt = new Date(dateStr + 'T00:00:00');
+        if (isNaN(dt.getTime())) return dateStr;
+        return dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+      }
+
+      function showToast(message, variant = 'default') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const borderMap = {
+          default: 'border-l-4 border-champagne',
+          success: 'border-l-4 border-sage',
+          error: 'border-l-4 border-terracotta'
+        };
+        const el = document.createElement('div');
+        el.className = `toast-enter pointer-events-auto bg-ink text-white px-4 py-3 rounded-2xl shadow-xl text-xs sm:text-sm font-medium ${borderMap[variant] || borderMap.default}`;
+        el.textContent = message;
+        container.appendChild(el);
+        setTimeout(() => el.remove(), 3200);
+      }
+
+      // ==================== PERSISTENCE & FIREBASE REAL-TIME SYNC ====================
+      function getCloudUrl() {
+        const base = (cloudCfg.databaseURL || '').trim().replace(/\/+$/, '');
+        if (!base) return '';
+        return `${base}/wedding_savings/${sanitizeCode(coupleCode)}.json`;
+      }
+
+      function updateCloudBadge(connected, customText) {
+        isCloudConnected = connected;
+        const btn = document.getElementById('cloud-status-btn');
+        const dot = document.getElementById('cloud-dot');
+        const label = document.getElementById('cloud-label');
+        if (!btn || !dot || !label) return;
+
+        if (connected) {
+          btn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-sage/40 bg-sage-light text-sage-dark text-xs font-semibold transition';
+          dot.className = 'w-2 h-2 rounded-full bg-sage animate-pulse';
+          label.textContent = customText || 'Live Cloud Sync';
+        } else {
+          btn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-line bg-cream text-ink-muted text-xs font-semibold transition';
+          dot.className = 'w-2 h-2 rounded-full bg-champagne';
+          label.textContent = customText || 'Mode Lokal (Sinkron Antar-Tab)';
+        }
+      }
+
+      async function pushToCloud() {
+        const url = getCloudUrl();
+        if (!url || isApplyingRemote) return;
+        try {
+          const res = await fetch(url, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          if (res.ok) {
+            updateCloudBadge(true, 'Live Cloud Sync');
+          } else {
+            updateCloudBadge(false, 'Cek Rules Firebase');
+          }
+        } catch (err) {
+          updateCloudBadge(false, 'Lokal (Koneksi Terputus)');
+        }
+      }
+
+      function applyRemotePayload(remoteObj) {
+        if (!remoteObj || typeof remoteObj !== 'object') return;
+        if (remoteObj.updatedAt && data.updatedAt && remoteObj.updatedAt <= data.updatedAt) return;
+        isApplyingRemote = true;
+        try {
+          data = normalizeData(remoteObj);
+          localStorage.setItem(storageKeyFor(coupleCode), JSON.stringify(data));
+          renderAll();
+        } finally {
+          isApplyingRemote = false;
+        }
+      }
+
+      async function fetchFromCloud() {
+        const url = getCloudUrl();
+        if (!url) return;
+        try {
+          const res = await fetch(url);
+          if (!res.ok) {
+            updateCloudBadge(false, 'Cek Rules Firebase');
+            return;
+          }
+          const json = await res.json();
+          if (json === null) {
+            await pushToCloud();
+          } else {
+            applyRemotePayload(json);
+          }
+          updateCloudBadge(true, 'Live Cloud Sync');
+        } catch (err) {
+          updateCloudBadge(false, 'Lokal (Offline)');
+        }
+      }
+
+      function startRealtimeSync() {
+        stopRealtimeSync();
+        const url = getCloudUrl();
+        if (!url) {
+          updateCloudBadge(false, 'Mode Lokal (Sinkron Antar-Tab)');
+          return;
+        }
+        fetchFromCloud();
+
+        try {
+          eventSource = new EventSource(url);
+          eventSource.addEventListener('put', function (ev) {
+            try {
+              const payload = JSON.parse(ev.data);
+              if (payload && payload.path === '/' && payload.data) {
+                applyRemotePayload(payload.data);
+              } else {
+                fetchFromCloud();
+              }
+              updateCloudBadge(true, 'Live Cloud Sync');
+            } catch (e) {}
+          });
+          eventSource.addEventListener('patch', function () {
+            fetchFromCloud();
+          });
+          eventSource.onerror = function () {
+            if (eventSource) {
+              eventSource.close();
+              eventSource = null;
+            }
+          };
+        } catch (e) {}
+
+        pollTimer = setInterval(fetchFromCloud, 5000);
+      }
+
+      function stopRealtimeSync() {
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+        }
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+      }
+
+      function commitData(toastMsg) {
+        data.updatedAt = Date.now();
+        try {
+          localStorage.setItem(storageKeyFor(coupleCode), JSON.stringify(data));
+        } catch (e) {}
+        renderAll();
+        pushToCloud();
+        if (toastMsg) showToast(toastMsg, 'success');
+      }
+
+      // Cross-tab synchronization via storage event
+      window.addEventListener('storage', function (e) {
+        if (e.key === storageKeyFor(coupleCode) && e.newValue) {
+          try {
+            applyRemotePayload(JSON.parse(e.newValue));
+          } catch (err) {}
+        } else if (e.key === ACTIVE_CODE_KEY && e.newValue) {
+          coupleCode = sanitizeCode(e.newValue);
+          data = loadLocalData(coupleCode);
+          renderAll();
+          startRealtimeSync();
+        }
+      });
+
+      // ==================== COMPUTATIONS & COUNTDOWN ====================
+      function computeMetrics() {
+        let totalDeposits = 0;
+        let totalExpenses = 0;
+        let p1Deposits = 0;
+        let p2Deposits = 0;
+        let jointDeposits = 0;
+        let p1TxCount = 0;
+        let p2TxCount = 0;
+
+        const posStats = {};
+        data.positions.forEach(p => {
+          posStats[p.id] = {
+            id: p.id,
+            name: p.name,
+            target: Number(p.target) || 0,
+            deposits: 0,
+            expenses: 0,
+            net: 0,
+            txCount: 0
+          };
+        });
+
+        const firstPosId = data.positions[0]?.id;
+
+        data.transactions.forEach(tx => {
+          const amt = Number(tx.amount) || 0;
+          const pid = posStats[tx.posId] ? tx.posId : firstPosId;
+          if (pid && posStats[pid]) {
+            posStats[pid].txCount += 1;
+          }
+
+          if (tx.type === 'expense') {
+            totalExpenses += amt;
+            if (pid && posStats[pid]) posStats[pid].expenses += amt;
+          } else {
+            totalDeposits += amt;
+            if (pid && posStats[pid]) posStats[pid].deposits += amt;
+
+            if (tx.actor === data.partner1) {
+              p1Deposits += amt;
+              p1TxCount += 1;
+            } else if (tx.actor === data.partner2) {
+              p2Deposits += amt;
+              p2TxCount += 1;
+            } else {
+              jointDeposits += amt;
+            }
+          }
+        });
+
+        Object.values(posStats).forEach(st => {
+          st.net = Math.max(0, st.deposits - st.expenses);
+        });
+
+        const netSaved = totalDeposits - totalExpenses;
+        const target = Math.max(0, Number(data.totalTarget) || 0);
+        const pct = target > 0 ? Math.max(0, Math.min(100, (netSaved / target) * 100)) : 0;
+        const remaining = Math.max(0, target - netSaved);
+
+        // Estimasi tanggal tercapai berdasarkan rata-rata setoran bulanan
+        const depositTxs = data.transactions.filter(t => t.type === 'deposit');
+        let avgMonthly = 0;
+        let estimatedCompletionText = 'Tambah setoran untuk hitung estimasi';
+
+        if (netSaved >= target && target > 0) {
+          estimatedCompletionText = 'Target tabungan sudah tercapai!';
+        } else if (depositTxs.length > 0 && totalDeposits > 0) {
+          const sortedDates = depositTxs
+            .map(t => new Date(t.date + 'T00:00:00').getTime())
+            .filter(ts => !isNaN(ts))
+            .sort((a, b) => a - b);
+
+          const earliest = sortedDates[0] || Date.now();
+          const spanDays = Math.max(30, (Date.now() - earliest) / 86400000);
+          const monthsElapsed = Math.max(1, spanDays / 30.4375);
+          avgMonthly = totalDeposits / monthsElapsed;
+
+          if (avgMonthly > 0) {
+            const monthsNeeded = remaining / avgMonthly;
+            const daysNeeded = Math.ceil(monthsNeeded * 30.4375);
+            const estDate = new Date(Date.now() + daysNeeded * 86400000);
+            estimatedCompletionText = 'Estimasi tercapai: ' + estDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+          }
+        }
+
+        const partnerDepositSum = p1Deposits + p2Deposits;
+        const p1Share = partnerDepositSum > 0 ? Math.round((p1Deposits / partnerDepositSum) * 100) : 0;
+        const p2Share = partnerDepositSum > 0 ? Math.round((p2Deposits / partnerDepositSum) * 100) : 0;
+
+        return {
+          totalDeposits,
+          totalExpenses,
+          netSaved,
+          target,
+          pct,
+          remaining,
+          p1Deposits,
+          p2Deposits,
+          jointDeposits,
+          p1TxCount,
+          p2TxCount,
+          p1Share,
+          p2Share,
+          avgMonthly,
+          estimatedCompletionText,
+          posStats
+        };
+      }
+
+      function updateCountdown() {
+        const datePart = data.weddingDate || '2027-05-15';
+        const timePart = data.weddingTime || '08:00';
+        const targetTs = new Date(`${datePart}T${timePart}:00`).getTime();
+        const now = Date.now();
+
+        let months = 0;
+        let days = 0;
+        let hours = 0;
+
+        if (!isNaN(targetTs) && targetTs > now) {
+          const totalHours = Math.floor((targetTs - now) / 3600000);
+          const hoursPerMonth = 30.4375 * 24;
+          months = Math.floor(totalHours / hoursPerMonth);
+          const remHoursAfterMonths = totalHours - Math.floor(months * hoursPerMonth);
+          days = Math.floor(remHoursAfterMonths / 24);
+          hours = remHoursAfterMonths % 24;
+        }
+
+        const mEl = document.getElementById('cd-months');
+        const dEl = document.getElementById('cd-days');
+        const hEl = document.getElementById('cd-hours');
+        if (mEl) mEl.textContent = String(months).padStart(2, '0');
+        if (dEl) dEl.textContent = String(days).padStart(2, '0');
+        if (hEl) hEl.textContent = String(hours).padStart(2, '0');
+      }
+
+      setInterval(updateCountdown, 1000);
+
+      // ==================== RENDER FUNCTIONS ====================
+      function syncDropdowns() {
+        const actorSel = document.getElementById('quick-actor');
+        const filterActorSel = document.getElementById('tx-filter-actor');
+        const actors = [data.partner1, data.partner2, 'Bersama'];
+
+        if (actorSel) {
+          const prev = actorSel.value;
+          actorSel.innerHTML = actors.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+          if (actors.includes(prev)) actorSel.value = prev;
+        }
+        if (filterActorSel) {
+          const prev = filterActorSel.value;
+          filterActorSel.innerHTML = `<option value="ALL">Semua Kontributor</option>` +
+            actors.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+          if (['ALL', ...actors].includes(prev)) filterActorSel.value = prev;
+        }
+
+        const quickPosSel = document.getElementById('quick-pos');
+        const filterPosSel = document.getElementById('tx-filter-pos');
+        const posOptionsHtml = data.positions.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+
+        if (quickPosSel) {
+          const prev = quickPosSel.value;
+          quickPosSel.innerHTML = posOptionsHtml;
+          if (data.positions.some(p => p.id === prev)) quickPosSel.value = prev;
+        }
+        if (filterPosSel) {
+          filterPosSel.innerHTML = `<option value="ALL">Semua Pos Anggaran</option>` + posOptionsHtml;
+          filterPosSel.value = selectedPosFilter;
+        }
+      }
+
+      function renderHeaderAndPartners(m) {
+        document.getElementById('top-couple-code').textContent = coupleCode;
+        document.getElementById('hero-couple-names').textContent = `${data.partner1} & ${data.partner2}`;
+        document.getElementById('hero-wedding-date-text').textContent = `${formatDateID(data.weddingDate)} (${data.weddingTime || '08:00'} WIB)`;
+        document.getElementById('hero-estimate-date').textContent = m.estimatedCompletionText;
+
+        document.getElementById('hero-net-saved').textContent = formatIDR(m.netSaved);
+        document.getElementById('hero-target-caption').textContent = `dari target ${formatIDR(m.target)}`;
+        document.getElementById('hero-progress-pct').textContent = `${m.pct.toFixed(1).replace('.0', '')}%`;
+        document.getElementById('hero-remaining-text').textContent = m.netSaved >= m.target
+          ? 'Surplus: ' + formatIDR(m.netSaved - m.target)
+          : 'Kekurangan: ' + formatIDR(m.remaining);
+        document.getElementById('hero-progress-bar').style.width = `${m.pct}%`;
+
+        document.getElementById('hero-gross-expense-info').textContent =
+          `Total Setoran: ${formatIDR(m.totalDeposits)} • Total Pengeluaran: ${formatIDR(m.totalExpenses)}`;
+        document.getElementById('hero-avg-monthly-info').textContent =
+          `Rata-rata setoran bulanan: ${formatIDR(m.avgMonthly)}/bln`;
+
+        // Partner 1
+        document.getElementById('p1-name-label').textContent = data.partner1;
+        document.getElementById('p1-deposit-total').textContent = formatIDR(m.p1Deposits);
+        document.getElementById('p1-share-badge').textContent = `${m.p1Share}%`;
+        document.getElementById('p1-share-bar').style.width = `${m.p1Share}%`;
+        document.getElementById('p1-tx-count').textContent = `${m.p1TxCount} kali setoran`;
+
+        // Partner 2
+        document.getElementById('p2-name-label').textContent = data.partner2;
+        document.getElementById('p2-deposit-total').textContent = formatIDR(m.p2Deposits);
+        document.getElementById('p2-share-badge').textContent = `${m.p2Share}%`;
+        document.getElementById('p2-share-bar').style.width = `${m.p2Share}%`;
+        document.getElementById('p2-tx-count').textContent = `${m.p2TxCount} kali setoran`;
+
+        document.getElementById('joint-deposit-note').textContent = `Bersama: ${formatIDR(m.jointDeposits)}`;
+
+        const qDate = document.getElementById('quick-date');
+        if (qDate && !qDate.value) {
+          qDate.value = new Date().toISOString().slice(0, 10);
+        }
+      }
+
+      function renderPositions(m) {
+        const grid = document.getElementById('pos-cards-grid');
+        const clearBtn = document.getElementById('clear-pos-filter-btn');
+        if (clearBtn) {
+          clearBtn.classList.toggle('hidden', selectedPosFilter === 'ALL');
+        }
+
+        if (!data.positions.length) {
+          grid.innerHTML = `<div class="col-span-full card-warm p-8 text-center text-sm text-ink-muted">Belum ada pos anggaran. Klik "+ Tambah Pos Baru" untuk memulai.</div>`;
+          return;
+        }
+
+        grid.innerHTML = data.positions.map(pos => {
+          const st = m.posStats[pos.id] || { target: pos.target, net: 0, deposits: 0, expenses: 0, txCount: 0 };
+          const pct = st.target > 0 ? Math.max(0, Math.min(100, (st.net / st.target) * 100)) : 0;
+          const isSelected = selectedPosFilter === pos.id;
+          const isDone = st.target > 0 && st.net >= st.target;
+
+          return `
+            <div onclick="WeddingSavings.selectPosFilter('${esc(pos.id)}')" class="cursor-pointer card-warm p-5 space-y-3.5 transition hover:border-champagne ${isSelected ? 'ring-2 ring-sage border-sage' : ''}">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-display text-xl font-bold text-ink">${esc(pos.name)}</h3>
+                    ${isDone ? '<span class="px-2 py-0.5 rounded-full bg-sage-light text-sage-dark text-[10px] font-bold">TERCAPAI</span>' : ''}
+                  </div>
+                  <p class="text-xs text-ink-muted mt-0.5 tabular-nums">${st.txCount} transaksi • Klik untuk filter riwayat</p>
+                </div>
+                <button type="button" onclick="event.stopPropagation(); WeddingSavings.openPosModal('${esc(pos.id)}')" class="px-2.5 py-1 rounded-lg bg-cream hover:bg-line/70 text-xs font-semibold text-ink transition">
+                  Target
+                </button>
+              </div>
+
+              <div class="space-y-1.5">
+                <div class="flex items-baseline justify-between text-xs tabular-nums">
+                  <span class="font-bold text-ink text-sm">${formatIDR(st.net)}</span>
+                  <span class="text-ink-muted">Target: ${formatIDR(st.target)}</span>
+                </div>
+                <div class="w-full h-2.5 rounded-full bg-cream overflow-hidden">
+                  <div class="h-full rounded-full transition-all duration-300 ${isDone ? 'bg-sage' : 'bg-champagne'}" style="width: ${pct}%"></div>
+                </div>
+                <div class="flex items-center justify-between text-[11px] text-ink-muted tabular-nums">
+                  <span>${pct.toFixed(0)}% teralokasi</span>
+                  <span>${st.net >= st.target ? 'Surplus ' + formatIDR(st.net - st.target) : 'Kurang ' + formatIDR(Math.max(0, st.target - st.net))}</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function renderCharts(m) {
+        if (typeof Chart === 'undefined') return;
+
+        // 1. Cumulative Growth Line Chart
+        const sortedAsc = [...data.transactions].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+        const labels = [];
+        const series = [];
+        let running = 0;
+
+        if (!sortedAsc.length) {
+          labels.push('Mulai');
+          series.push(0);
+        } else {
+          sortedAsc.forEach(tx => {
+            running += tx.type === 'deposit' ? Number(tx.amount || 0) : -(Number(tx.amount || 0));
+            labels.push(formatShortDateID(tx.date));
+            series.push(running);
+          });
+        }
+
+        const growthCtx = document.getElementById('growth-chart')?.getContext('2d');
+        if (growthCtx) {
+          if (growthChartInstance) growthChartInstance.destroy();
+          growthChartInstance = new Chart(growthCtx, {
+            type: 'line',
+            data: {
+              labels,
+              datasets: [{
+                label: 'Saldo Tabungan Bersih (Rp)',
+                data: series,
+                borderColor: '#5C7A67',
+                backgroundColor: 'rgba(92, 122, 103, 0.14)',
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: '#C59B6D',
+                pointRadius: 4
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: ctx => formatIDR(ctx.parsed.y)
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  ticks: {
+                    callback: val => 'Rp ' + Number(val).toLocaleString('id-ID')
+                  },
+                  grid: { color: '#EFE9DF' }
+                },
+                x: { grid: { display: false } }
+              }
+            }
+          });
+        }
+
+        // 2. Breakdown Chart (Partner vs Per Pos)
+        const btnPartner = document.getElementById('breakdown-mode-partner');
+        const btnPos = document.getElementById('breakdown-mode-pos');
+        if (btnPartner && btnPos) {
+          btnPartner.className = breakdownMode === 'partner'
+            ? 'px-2.5 py-1 rounded-md bg-white text-ink shadow-2xs'
+            : 'px-2.5 py-1 rounded-md text-ink-muted hover:text-ink';
+          btnPos.className = breakdownMode === 'pos'
+            ? 'px-2.5 py-1 rounded-md bg-white text-ink shadow-2xs'
+            : 'px-2.5 py-1 rounded-md text-ink-muted hover:text-ink';
+        }
+
+        let bdLabels = [];
+        let bdValues = [];
+        let bdColors = ['#5C7A67', '#C59B6D', '#B86B52', '#8AA394', '#D9B993', '#D49A87'];
+
+        if (breakdownMode === 'partner') {
+          bdLabels = [data.partner1, data.partner2, 'Bersama'];
+          bdValues = [m.p1Deposits, m.p2Deposits, m.jointDeposits];
+          bdColors = ['#5C7A67', '#C59B6D', '#B86B52'];
+        } else {
+          const list = Object.values(m.posStats);
+          bdLabels = list.map(p => p.name);
+          bdValues = list.map(p => p.net);
+        }
+
+        const bdCtx = document.getElementById('breakdown-chart')?.getContext('2d');
+        if (bdCtx) {
+          if (breakdownChartInstance) breakdownChartInstance.destroy();
+          breakdownChartInstance = new Chart(bdCtx, {
+            type: 'doughnut',
+            data: {
+              labels: bdLabels,
+              datasets: [{
+                data: bdValues,
+                backgroundColor: bdColors.slice(0, bdLabels.length),
+                borderColor: '#FFFFFF',
+                borderWidth: 2
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: '62%',
+              plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                tooltip: {
+                  callbacks: {
+                    label: ctx => `${ctx.label}: ${formatIDR(ctx.parsed)}`
+                  }
+                }
+              }
+            }
+          });
+        }
+      }
+
+      function renderTransactions() {
+        const q = (document.getElementById('tx-search')?.value || '').trim().toLowerCase();
+        const typeFilter = document.getElementById('tx-filter-type')?.value || 'ALL';
+        const actorFilter = document.getElementById('tx-filter-actor')?.value || 'ALL';
+        const posFilter = document.getElementById('tx-filter-pos')?.value || selectedPosFilter;
+
+        const posMap = {};
+        data.positions.forEach(p => { posMap[p.id] = p.name; });
+
+        const filtered = [...data.transactions]
+          .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+          .filter(tx => {
+            if (typeFilter !== 'ALL' && tx.type !== typeFilter) return false;
+            if (actorFilter !== 'ALL' && tx.actor !== actorFilter) return false;
+            if (posFilter !== 'ALL' && tx.posId !== posFilter) return false;
+            if (q) {
+              const posName = (posMap[tx.posId] || '').toLowerCase();
+              const hay = `${tx.note || ''} ${tx.actor || ''} ${posName}`.toLowerCase();
+              if (!hay.includes(q)) return false;
+            }
+            return true;
+          });
+
+        const summaryEl = document.getElementById('ledger-filter-summary');
+        if (summaryEl) {
+          const activePosLabel = posFilter !== 'ALL' && posMap[posFilter] ? ` • Pos: ${posMap[posFilter]}` : '';
+          summaryEl.textContent = `Menampilkan ${filtered.length} dari ${data.transactions.length} transaksi${activePosLabel}`;
+        }
+
+        const tbody = document.getElementById('tx-table-body');
+        if (!tbody) return;
+
+        if (!filtered.length) {
+          tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-sm text-ink-muted">Belum ada transaksi yang sesuai dengan filter.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = filtered.map(tx => {
+          const isDep = tx.type !== 'expense';
+          const posName = posMap[tx.posId] || 'Umum';
+          return `
+            <tr class="hover:bg-ivory/80 transition">
+              <td class="py-3 px-3 text-xs text-ink-muted whitespace-nowrap tabular-nums">${formatShortDateID(tx.date)}</td>
+              <td class="py-3 px-3 whitespace-nowrap">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${isDep ? 'bg-sage-light text-sage-dark' : 'bg-terracotta-light text-terracotta-dark'}">
+                  ${isDep ? '+ Setoran' : '- Pengeluaran'}
+                </span>
+              </td>
+              <td class="py-3 px-3 text-xs font-medium text-ink whitespace-nowrap">${esc(tx.actor)}</td>
+              <td class="py-3 px-3 text-xs text-ink whitespace-nowrap">${esc(posName)}</td>
+              <td class="py-3 px-3 text-xs text-ink-muted max-w-xs truncate" title="${esc(tx.note || '-')}">${esc(tx.note || '-')}</td>
+              <td class="py-3 px-3 text-right font-bold whitespace-nowrap tabular-nums ${isDep ? 'text-sage-dark' : 'text-terracotta-dark'}">
+                ${isDep ? '+' : '-'} ${formatIDR(tx.amount)}
+              </td>
+              <td class="py-3 px-3 text-right whitespace-nowrap text-xs">
+                <button type="button" onclick="WeddingSavings.openTxModal(null, '${esc(tx.id)}')" class="text-champagne-dark hover:underline font-semibold mr-2.5">Edit</button>
+                <button type="button" onclick="WeddingSavings.deleteTransaction('${esc(tx.id)}')" class="text-terracotta-dark hover:underline">Hapus</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      function renderAll() {
+        const m = computeMetrics();
+        syncDropdowns();
+        renderHeaderAndPartners(m);
+        updateCountdown();
+        renderPositions(m);
+        renderCharts(m);
+        renderTransactions();
+        updateCloudBadge(isCloudConnected);
+      }
+
+      // ==================== INTERACTIONS & MODALS ====================
+      function openModal(title, bodyHtml) {
+        document.getElementById('modal-title').textContent = title;
+        document.getElementById('modal-body').innerHTML = bodyHtml;
+        document.getElementById('modal-backdrop').classList.remove('hidden');
+      }
+
+      function closeModal() {
+        document.getElementById('modal-backdrop').classList.add('hidden');
+        document.getElementById('modal-body').innerHTML = '';
+      }
+
+      document.getElementById('modal-backdrop').addEventListener('click', function (e) {
+        if (e.target === this) closeModal();
+      });
+
+      function handleInlineQuickSubmit(e) {
+        e.preventDefault();
+        const type = document.querySelector('input[name="quick-type"]:checked')?.value || 'deposit';
+        const actor = document.getElementById('quick-actor').value;
+        const posId = document.getElementById('quick-pos').value;
+        const amount = Number(document.getElementById('quick-amount').value);
+        const date = document.getElementById('quick-date').value || new Date().toISOString().slice(0, 10);
+        const note = document.getElementById('quick-note').value.trim();
+
+        if (!amount || amount <= 0) {
+          showToast('Masukkan nominal tabungan atau pengeluaran yang valid.', 'error');
+          return;
+        }
+
+        data.transactions.unshift({
+          id: uid('tx'),
+          type,
+          actor,
+          posId,
+          amount,
+          date,
+          note
+        });
+
+        document.getElementById('quick-amount').value = '';
+        document.getElementById('quick-note').value = '';
+        commitData(type === 'deposit' ? 'Setoran tabungan berhasil dicatat!' : 'Pengeluaran berhasil dicatat!');
+      }
+
+      function openTxModal(defaultType = 'deposit', editId = null) {
+        const existing = editId ? data.transactions.find(t => t.id === editId) : null;
+        const activeType = existing ? existing.type : defaultType;
+        const actors = [data.partner1, data.partner2, 'Bersama'];
+
+        openModal(existing ? 'Edit Transaksi' : (activeType === 'expense' ? 'Catat Pengeluaran' : 'Catat Tabungan'), `
+          <form onsubmit="WeddingSavings.saveTx(event, '${editId || ''}')" class="space-y-4">
+            <div class="grid grid-cols-2 gap-2">
+              <label class="cursor-pointer">
+                <input type="radio" name="m-tx-type" value="deposit" ${activeType === 'deposit' ? 'checked' : ''} class="peer sr-only" />
+                <div class="py-2.5 rounded-xl border border-line text-center text-xs font-semibold text-ink-muted peer-checked:bg-sage peer-checked:text-white peer-checked:border-sage transition">
+                  + Setoran Tabungan
+                </div>
+              </label>
+              <label class="cursor-pointer">
+                <input type="radio" name="m-tx-type" value="expense" ${activeType === 'expense' ? 'checked' : ''} class="peer sr-only" />
+                <div class="py-2.5 rounded-xl border border-line text-center text-xs font-semibold text-ink-muted peer-checked:bg-terracotta peer-checked:text-white peer-checked:border-terracotta transition">
+                  - Pengeluaran Nikah
+                </div>
+              </label>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-ink-muted mb-1">Siapa yang Menabung / Membayar</label>
+                <select id="m-tx-actor" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-line text-sm text-ink">
+                  ${actors.map(a => `<option value="${esc(a)}" ${existing?.actor === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-ink-muted mb-1">Pos Anggaran Pernikahan</label>
+                <select id="m-tx-pos" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-line text-sm text-ink">
+                  ${data.positions.map(p => `<option value="${esc(p.id)}" ${existing?.posId === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-ink-muted mb-1">Nominal (Rp)</label>
+                <input type="number" min="1" step="any" id="m-tx-amount" required value="${existing ? existing.amount : ''}" placeholder="Contoh: 2500000" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-line text-sm font-semibold text-ink tabular-nums" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-ink-muted mb-1">Tanggal</label>
+                <input type="date" id="m-tx-date" required value="${existing ? existing.date : new Date().toISOString().slice(0, 10)}" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-line text-sm text-ink" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-ink-muted mb-1">Catatan</label>
+              <input type="text" id="m-tx-note" value="${esc(existing?.note || '')}" placeholder="Contoh: DP gedung / Setoran rutin bulanan" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-line text-sm text-ink" />
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+              <button type="button" onclick="WeddingSavings.closeModal()" class="px-4 py-2 rounded-xl bg-cream text-xs font-semibold text-ink">Batal</button>
+              <button type="submit" class="px-5 py-2 rounded-xl bg-sage hover:bg-sage-dark text-white text-xs font-semibold">Simpan Transaksi</button>
+            </div>
+          </form>
+        `);
+      }
+
+      function saveTx(e, editId) {
+        e.preventDefault();
+        const type = document.querySelector('input[name="m-tx-type"]:checked')?.value || 'deposit';
+        const actor = document.getElementById('m-tx-actor').value;
+        const posId = document.getElementById('m-tx-pos').value;
+        const amount = Number(document.getElementById('m-tx-amount').value);
+        const date = document.getElementById('m-tx-date').value || new Date().toISOString().slice(0, 10);
+        const note = document.getElementById('m-tx-note').value.trim();
+
+        if (!amount || amount <= 0) {
+          showToast('Nominal harus lebih dari 0.', 'error');
+          return;
+        }
+
+        if (editId) {
+          const idx = data.transactions.findIndex(t => t.id === editId);
+          if (idx >= 0) {
+            data.transactions[idx] = { ...data.transactions[idx], type, actor, posId, amount, date, note };
+          }
+          closeModal();
+          commitData('Transaksi berhasil diperbarui!');
+        } else {
+          data.transactions.unshift({ id: uid('tx'), type, actor, posId, amount, date, note });
+          closeModal();
+          commitData('Transaksi baru berhasil disimpan!');
+        }
+      }
+
+      function deleteTransaction(id) {
+        data.transactions = data.transactions.filter(t => t.id !== id);
+        commitData('Transaksi dihapus.');
+      }
+
+      function openPosModal(editPosId = null) {
+        const pos = editPosId ? data.positions.find(p => p.id === editPosId) : null;
+        openModal(pos ? 'Edit Pos Anggaran' : 'Tambah Pos Anggaran Baru', `
+          <form onsubmit="WeddingSavings.savePos(event, '${editPosId || ''}')" class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-ink-muted mb-1">Nama Pos Anggaran</label>
+              <input type="text" id="m-pos-name" required value="${esc(pos?.name || '')}" placeholder="Contoh: Mahar & Mas Kawin" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-line text-sm text-ink" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-ink-muted mb-1">Target Dana Pos (Rp)</label>
+              <input type="number" min="0" step="any" id="m-pos-target" required value="${pos ? pos.target : 5000000}" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-line text-sm font-semibold text-ink tabular-nums" />
+            </div>
+            <div class="flex items-center justify-between pt-2">
+              ${pos && data.positions.length > 1
+                ? `<button type="button" onclick="WeddingSavings.deletePos('${esc(pos.id)}')" class="px-3.5 py-2 rounded-xl bg-terracotta-light text-terracotta-dark text-xs font-semibold">Hapus Pos</button>`
+                : '<span></span>'}
+              <div class="flex gap-2">
+                <button type="button" onclick="WeddingSavings.closeModal()" class="px-4 py-2 rounded-xl bg-cream text-xs font-semibold text-ink">Batal</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-champagne hover:bg-champagne-dark text-white text-xs font-semibold">Simpan Pos</button>
+              </div>
+            </div>
+          </form>
+        `);
+      }
+
+      function savePos(e, editPosId) {
+        e.preventDefault();
+        const name = document.getElementById('m-pos-name').value.trim();
+        const target = Math.max(0, Number(document.getElementById('m-pos-target').value) || 0);
+        if (!name) return;
+
+        if (editPosId) {
+          const p = data.positions.find(x => x.id === editPosId);
+          if (p) { p.name = name; p.target = target; }
+          closeModal();
+          commitData('Target pos anggaran diperbarui!');
+        } else {
+          data.positions.push({ id: uid('pos'), name, target });
+          closeModal();
+          commitData('Pos anggaran baru ditambahkan!');
+        }
+      }
+
+      function deletePos(posId) {
+        if (data.positions.length <= 1) return;
+        const fallbackId = data.positions.find(p => p.id !== posId)?.id;
+        data.positions = data.positions.filter(p => p.id !== posId);
+        data.transactions.forEach(tx => {
+          if (tx.posId === posId && fallbackId) tx.posId = fallbackId;
+        });
+        if (selectedPosFilter === posId) selectedPosFilter = 'ALL';
+        closeModal();
+        commitData('Pos anggaran dihapus.');
+      }
+
+      function selectPosFilter(posId) {
+        selectedPosFilter = selectedPosFilter === posId ? 'ALL' : posId;
+        const filterPosSel = document.getElementById('tx-filter-pos');
+        if (filterPosSel) filterPosSel.value = selectedPosFilter;
+        const m = computeMetrics();
+        renderPositions(m);
+        renderTransactions();
+      }
+
+      function clearPosFilter() {
+        selectedPosFilter = 'ALL';
+        const filterPosSel = document.getElementById('tx-filter-pos');
+        if (filterPosSel) filterPosSel.value = 'ALL';
+        const m = computeMetrics();
+        renderPositions(m);
+        renderTransactions();
+      }
+
+      function setBreakdownMode(mode) {
+        breakdownMode = mode;
+        renderCharts(computeMetrics());
+      }
+
+      function openPlanSettingsModal() {
+        openModal('Pengaturan Pasangan, Tanggal & Target', `
+          <form onsubmit="WeddingSavings.savePlanSettings(event)" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-ink-muted mb-1">Nama Pasangan 1</label>
+                <input type="text" id="s-p1" required value="${esc(data.partner1)}" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-line text-sm text-ink" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-ink-muted mb-1">Nama Pasangan 2</label>
+                <input type="text" id="s-p2" required value="${esc(data.partner2)}" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-line text-sm text-ink" />
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-ink-muted mb-1">Tanggal Target Akad &amp; Resepsi</label>
+                <input type="date" id="s-date" required value="${esc(data.weddingDate)}" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-line text-sm text-ink" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-ink-muted mb-1">Jam Mulai Akad</label>
+                <input type="time" id="s-time" value="${esc(data.weddingTime || '08:00')}" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-line text-sm text-ink" />
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-ink-muted mb-1">Total Target Anggaran Pernikahan (Rp)</label>
+              <input type="number" min="0" step="any" id="s-target" required value="${Number(data.totalTarget) || 0}" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-line text-sm font-semibold text-ink tabular-nums" />
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+              <button type="button" onclick="WeddingSavings.closeModal()" class="px-4 py-2 rounded-xl bg-cream text-xs font-semibold text-ink">Batal</button>
+              <button type="submit" class="px-5 py-2 rounded-xl bg-sage hover:bg-sage-dark text-white text-xs font-semibold">Simpan Pengaturan</button>
+            </div>
+          </form>
+        `);
+      }
+
+      function savePlanSettings(e) {
+        e.preventDefault();
+        data.partner1 = document.getElementById('s-p1').value.trim() || 'Pasangan 1';
+        data.partner2 = document.getElementById('s-p2').value.trim() || 'Pasangan 2';
+        data.weddingDate = document.getElementById('s-date').value || data.weddingDate;
+        data.weddingTime = document.getElementById('s-time').value || '08:00';
+        data.totalTarget = Math.max(0, Number(document.getElementById('s-target').value) || 0);
+        closeModal();
+        commitData('Pengaturan pasangan & target berhasil disimpan!');
+      }
+
+      function openCoupleSpaceModal() {
+        const shareUrl = new URL(window.location.href);
+        shareUrl.searchParams.set('kode', coupleCode);
+
+        openModal('Kode Pasangan (Shared Couple Space)', `
+          <div class="space-y-4">
+            <p class="text-xs sm:text-sm text-ink-muted">
+              Gunakan <strong>Kode Pasangan</strong> yang sama agar Anda dan pasangan dapat membuka ruang tabungan pernikahan yang sama di perangkat lain.
+            </p>
+            <form onsubmit="WeddingSavings.switchCoupleCode(event)" class="flex gap-2">
+              <input type="text" id="m-couple-code" required value="${esc(coupleCode)}" class="flex-1 px-3.5 py-2.5 rounded-xl bg-white border border-line text-sm font-mono uppercase text-ink" />
+              <button type="submit" class="px-4 py-2.5 rounded-xl bg-sage hover:bg-sage-dark text-white text-xs font-semibold shrink-0">Buka Kode</button>
+            </form>
+            <div class="p-3.5 rounded-2xl bg-cream border border-line space-y-2">
+              <div class="text-xs font-semibold text-ink">Tautan Langsung Kode Pasangan</div>
+              <div class="text-xs font-mono text-ink-muted break-all">${esc(shareUrl.toString())}</div>
+              <button type="button" onclick="WeddingSavings.copyShareLink('${esc(shareUrl.toString())}')" class="px-3 py-1.5 rounded-xl bg-white hover:bg-champagne-light border border-line text-xs font-semibold text-ink">
+                Salin Tautan untuk Pasangan
+              </button>
+            </div>
+          </div>
+        `);
+      }
+
+      function switchCoupleCode(e) {
+        e.preventDefault();
+        const nextCode = sanitizeCode(document.getElementById('m-couple-code').value);
+        coupleCode = nextCode;
+        localStorage.setItem(ACTIVE_CODE_KEY, coupleCode);
+        data = loadLocalData(coupleCode);
+        closeModal();
+        renderAll();
+        startRealtimeSync();
+        showToast(`Beralih ke Kode Pasangan: ${coupleCode}`, 'success');
+      }
+
+      function copyShareLink(url) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(() => showToast('Tautan Kode Pasangan disalin!', 'success')).catch(() => {});
+        }
+      }
+
+      function openCloudModal() {
+        openModal('Real-Time Multi-Device Sync (Firebase Realtime DB)', `
+          <div class="space-y-4">
+            <p class="text-xs sm:text-sm text-ink-muted">
+              Hubungkan ke <strong>Firebase Realtime Database</strong> agar setoran &amp; pengeluaran langsung tersinkron real-time di HP pasangan tanpa refresh manual. Tanpa URL Firebase, aplikasi tetap berjalan lancar dengan penyimpanan <code>localStorage</code> + sinkronisasi antar-tab.
+            </p>
+            <form onsubmit="WeddingSavings.saveCloudConfig(event)" class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-ink-muted mb-1">Firebase Realtime Database URL</label>
+                <input type="url" id="m-cloud-url" value="${esc(cloudCfg.databaseURL || '')}" placeholder="https://nama-project-default-rtdb.firebaseio.com" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-line text-xs font-mono text-ink" />
+              </div>
+              <div class="flex items-center justify-between pt-2">
+                <button type="button" onclick="WeddingSavings.clearCloudConfig()" class="px-3.5 py-2 rounded-xl bg-terracotta-light text-terracotta-dark text-xs font-semibold">Gunakan Mode Lokal</button>
+                <div class="flex gap-2">
+                  <button type="button" onclick="WeddingSavings.closeModal()" class="px-4 py-2 rounded-xl bg-cream text-xs font-semibold text-ink">Batal</button>
+                  <button type="submit" class="px-5 py-2 rounded-xl bg-sage hover:bg-sage-dark text-white text-xs font-semibold">Simpan &amp; Hubungkan</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        `);
+      }
+
+      function saveCloudConfig(e) {
+        e.preventDefault();
+        const url = document.getElementById('m-cloud-url').value.trim().replace(/\/+$/, '');
+        cloudCfg = { databaseURL: url };
+        localStorage.setItem(CLOUD_CFG_KEY, JSON.stringify(cloudCfg));
+        closeModal();
+        startRealtimeSync();
+        showToast(url ? 'Menghubungkan ke Firebase Realtime Sync...' : 'Beralih ke Mode Lokal.', 'success');
+      }
+
+      function clearCloudConfig() {
+        cloudCfg = { databaseURL: '' };
+        localStorage.setItem(CLOUD_CFG_KEY, JSON.stringify(cloudCfg));
+        stopRealtimeSync();
+        updateCloudBadge(false, 'Mode Lokal (Sinkron Antar-Tab)');
+        closeModal();
+        showToast('Mode Lokal aktif.', 'default');
+      }
+
+      function exportJSON() {
+        const payload = {
+          app: 'Tabungan Menuju Akad & Resepsi',
+          coupleCode,
+          exportedAt: new Date().toISOString(),
+          data
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `tabungan-nikah-${coupleCode.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        showToast('Backup JSON berhasil diunduh!', 'success');
+      }
+
+      function importJSON(inputEl) {
+        const file = inputEl.files && inputEl.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (ev) {
+          try {
+            const parsed = JSON.parse(ev.target.result);
+            const rawData = parsed && parsed.data && Array.isArray(parsed.data.transactions) ? parsed.data : parsed;
+            if (!rawData || !Array.isArray(rawData.transactions)) {
+              throw new Error('Format JSON tidak dikenali');
+            }
+            data = normalizeData(rawData);
+            commitData('Data backup JSON berhasil diimpor!');
+          } catch (err) {
+            showToast('File JSON tidak valid.', 'error');
+          } finally {
+            inputEl.value = '';
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      // ==================== PUBLIC API & INIT ====================
+      window.WeddingSavings = {
+        closeModal,
+        handleInlineQuickSubmit,
+        openTxModal,
+        saveTx,
+        deleteTransaction,
+        openPosModal,
+        savePos,
+        deletePos,
+        selectPosFilter,
+        clearPosFilter,
+        setBreakdownMode,
+        renderTransactions,
+        openPlanSettingsModal,
+        savePlanSettings,
+        openCoupleSpaceModal,
+        switchCoupleCode,
+        copyShareLink,
+        openCloudModal,
+        saveCloudConfig,
+        clearCloudConfig,
+        exportJSON,
+        importJSON
+      };
+
+      renderAll();
+      startRealtimeSync();
+    })();
+  </script>
+</body>
+</html>
