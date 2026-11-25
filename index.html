@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tabungan Menuju Akad & Resepsi — Fajar & Selviana</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- LOGIN / ROOM GATE MODAL -->
+  <div id="authGate" class="auth-gate">
+    <div class="auth-card">
+      <div class="auth-badge">💍 Our Wedding Fund • Realtime Sync</div>
+      <h1>Fajar &amp; Selviana</h1>
+      <p class="auth-subtitle">Masuk ke ruang tabungan bersama agar perubahan saldo, pos anggaran, dan catatan transaksi tersinkronisasi otomatis antar HP &amp; jaringan.</p>
+      
+      <form id="loginForm" class="auth-form">
+        <div class="form-group">
+          <label for="loginPartner">Siapa yang mengakses?</label>
+          <select id="loginPartner" required>
+            <option value="Fajar">Fajar Sidiq</option>
+            <option value="Selviana">Selviana Nurhidayah</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="roomCodeInput">Kode Ruang Bersama (Room ID)</label>
+          <input type="text" id="roomCodeInput" value="fajar-selviana-2027" placeholder="contoh: fajar-selviana-2027" required />
+          <small>Gunakan kode ruang &amp; PIN yang sama di HP Fajar dan HP Selviana.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="roomPinInput">PIN Keamanan Bersama</label>
+          <input type="password" id="roomPinInput" value="2027" placeholder="Masukkan PIN (default: 2027)" required />
+        </div>
+
+        <details class="firebase-config-box">
+          <summary>⚙️ Konfigurasi Firebase Realtime Database (Wajib untuk Sync Beda Jaringan)</summary>
+          <p class="hint-text">Tempel URL Firebase Realtime Database Anda agar data tersimpan di cloud dan langsung ter-update di beda jaringan seluler/Wi-Fi. Jika dikosongkan, aplikasi berjalan dalam mode Offline/Lokal.</p>
+          <div class="form-group">
+            <label for="firebaseUrlInput">Firebase Database URL</label>
+            <input type="url" id="firebaseUrlInput" placeholder="https://nama-project-default-rtdb.asia-southeast1.firebasedatabase.app" />
+          </div>
+          <div class="form-group">
+            <label for="firebaseApiKeyInput">Firebase Web API Key (Opsional jika rules publik)</label>
+            <input type="text" id="firebaseApiKeyInput" placeholder="AIzaSy..." />
+          </div>
+        </details>
+
+        <button type="submit" class="btn btn-primary btn-block">Masuk ke Dashboard Tabungan</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN APPLICATION -->
+  <div id="appShell" class="app-shell hidden">
+    <!-- Top Header -->
+    <header class="topbar">
+      <div class="container topbar-inner">
+        <div class="brand">
+          <span class="brand-monogram">F &amp; S</span>
+          <div>
+            <h1 class="brand-title">Tabungan Menuju Akad &amp; Resepsi</h1>
+            <div class="sync-status-row">
+              <span id="syncIndicator" class="sync-badge offline">● Mode Lokal (Offline)</span>
+              <span id="activeUserLabel" class="user-pill">Aktif: Fajar</span>
+            </div>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button id="btnOpenSettings" class="btn btn-outline btn-sm" title="Pengaturan Target & Cloud">⚙️ Pengaturan</button>
+          <button id="btnSwitchUser" class="btn btn-ghost btn-sm" title="Keluar / Ganti Akun">🔒 Kunci</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container main-content">
+      <!-- Hero Summary & Countdown -->
+      <section class="hero-grid">
+        <div class="card hero-main-card">
+          <div class="hero-top">
+            <div>
+              <span class="eyebrow">Total Dana Terkumpul</span>
+              <h2 id="totalCollectedDisplay" class="hero-amount">Rp 0</h2>
+            </div>
+            <div class="countdown-box">
+              <span class="countdown-label">Menuju Hari Bahagia</span>
+              <strong id="countdownDisplay" class="countdown-value">-- Hari Lagi</strong>
+              <small id="weddingDateDisplay">12 Desember 2027</small>
+            </div>
+          </div>
+
+          <div class="progress-wrapper">
+            <div class="progress-meta">
+              <span>Progres Keseluruhan: <strong id="overallPercentDisplay">0%</strong></span>
+              <span>Target: <strong id="targetTotalDisplay">Rp 150.000.000</strong></span>
+            </div>
+            <div class="progress-track">
+              <div id="overallProgressBar" class="progress-fill" style="width: 0%"></div>
+            </div>
+            <div class="progress-footer">
+              <span>Sisa Kebutuhan: <strong id="remainingAmountDisplay">Rp 150.000.000</strong></span>
+              <span>Rekomendasi Nabung/Bulan: <strong id="monthlyRecommendationDisplay">Rp 0</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Partner Split Cards -->
+        <div class="partner-stack">
+          <div class="card partner-card fajar">
+            <div class="partner-header">
+              <div class="avatar avatar-fajar">F</div>
+              <div>
+                <h3 id="partner1NameDisplay">Fajar Sidiq</h3>
+                <span id="partner1ShareDisplay" class="share-pill">Kontribusi 0%</span>
+              </div>
+            </div>
+            <div id="partner1AmountDisplay" class="partner-amount">Rp 0</div>
+            <div class="mini-progress">
+              <div id="partner1Bar" class="mini-bar fajar-bar" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <div class="card partner-card selviana">
+            <div class="partner-header">
+              <div class="avatar avatar-selviana">S</div>
+              <div>
+                <h3 id="partner2NameDisplay">Selviana Nurhidayah</h3>
+                <span id="partner2ShareDisplay" class="share-pill">Kontribusi 0%</span>
+              </div>
+            </div>
+            <div id="partner2AmountDisplay" class="partner-amount">Rp 0</div>
+            <div class="mini-progress">
+              <div id="partner2Bar" class="mini-bar selviana-bar" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Quick Input & Analytics Grid -->
+      <section class="middle-grid">
+        <!-- Quick Add / Edit Transaction Form -->
+        <div class="card">
+          <div class="card-header">
+            <h3 id="txFormTitle">➕ Catat Setoran / Penyesuaian</h3>
+            <button id="btnCancelEditTx" class="btn btn-ghost btn-xs hidden" type="button">Batal Edit</button>
+          </div>
+          <form id="transactionForm" class="stack-form">
+            <input type="hidden" id="editTxId" />
+            <div class="form-row">
+              <div class="form-group">
+                <label for="txType">Jenis Transaksi</label>
+                <select id="txType" required>
+                  <option value="deposit">Setoran Masuk (+)</option>
+                  <option value="expense">Pembayaran Vendor / DP (-)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="txPartner">Oleh</label>
+                <select id="txPartner" required>
+                  <option value="Fajar">Fajar Sidiq</option>
+                  <option value="Selviana">Selviana Nurhidayah</option>
+                  <option value="Bersama">Rekening Bersama</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="txAmount">Nominal (Rp)</label>
+                <input type="number" id="txAmount" min="1000" step="1000" placeholder="Contoh: 2500000" required />
+              </div>
+              <div class="form-group">
+                <label for="txCategory">Pos Anggaran</label>
+                <select id="txCategory" required></select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="txDate">Tanggal</label>
+                <input type="date" id="txDate" required />
+              </div>
+              <div class="form-group">
+                <label for="txMethod">Metode / Rekening</label>
+                <input type="text" id="txMethod" placeholder="Contoh: Blu / Bibit / Mandiri" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="txNote">Catatan</label>
+              <input type="text" id="txNote" placeholder="Contoh: Tabungan gajian bulan ini / DP Gedung" />
+            </div>
+
+            <button type="submit" id="btnSubmitTx" class="btn btn-primary btn-block">Simpan Transaksi Realtime</button>
+          </form>
+        </div>
+
+        <!-- Analytics Chart -->
+        <div class="card">
+          <div class="card-header">
+            <h3>📊 Visualisasi Kontribusi &amp; Pos Anggaran</h3>
+            <div class="tab-pills">
+              <button type="button" class="tab-pill active" data-chart="partner">Perbandingan Pasangan</button>
+              <button type="button" class="tab-pill" data-chart="category">Alokasi Pos</button>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="savingsChart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Wedding Budget Milestones (Editable Realtime) -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h3>🎯 Rincian Pos Anggaran Pernikahan (Bisa Diedit Realtime)</h3>
+            <p class="card-subtitle">Klik nominal target pada tiap pos untuk mengubah estimasi biaya secara langsung.</p>
+          </div>
+          <button id="btnAddCategory" class="btn btn-outline btn-sm">+ Tambah Pos</button>
+        </div>
+        <div id="budgetGrid" class="budget-grid"></div>
+      </section>
+
+      <!-- Realtime Transaction Ledger -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h3>📒 Riwayat Mutasi Tabungan Bersama</h3>
+            <p class="card-subtitle">Setiap perubahan langsung muncul di perangkat pasangan Anda.</p>
+          </div>
+          <div class="filter-bar">
+            <select id="filterPartner">
+              <option value="ALL">Semua Kontributor</option>
+              <option value="Fajar">Fajar</option>
+              <option value="Selviana">Selviana</option>
+              <option value="Bersama">Bersama</option>
+            </select>
+            <button id="btnExportCsv" class="btn btn-outline btn-sm">📥 Export CSV</button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="ledger-table">
+            <thead>
+              <tr>
+                <th>Tanggal</th>
+                <th>Kontributor</th>
+                <th>Pos Anggaran</th>
+                <th>Catatan &amp; Metode</th>
+                <th class="text-right">Nominal</th>
+                <th class="text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="ledgerBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settingsModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>⚙️ Pengaturan Pernikahan &amp; Sinkronisasi Cloud</h3>
+        <button id="btnCloseSettings" class="btn-icon">&times;</button>
+      </div>
+      <form id="settingsForm" class="stack-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="setPartner1">Nama Pasangan 1</label>
+            <input type="text" id="setPartner1" required />
+          </div>
+          <div class="form-group">
+            <label for="setPartner2">Nama Pasangan 2</label>
+            <input type="text" id="setPartner2" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="setWeddingDate">Rencana Tanggal Akad/Resepsi</label>
+            <input type="date" id="setWeddingDate" required />
+          </div>
+          <div class="form-group">
+            <label for="setPin">PIN Keamanan Bersama</label>
+            <input type="text" id="setPin" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="setFirebaseUrl">Firebase Realtime Database URL</label>
+          <input type="url" id="setFirebaseUrl" placeholder="https://project-anda-default-rtdb.firebaseio.com" />
+          <small>Pastikan URL berakhiran <code>.firebaseio.com</code> atau <code>.firebasedatabase.app</code>.</small>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="btnResetDemo" class="btn btn-danger-outline btn-sm">Reset Data Awal</button>
+          <button type="submit" class="btn btn-primary">Simpan Pengaturan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Firebase Compat SDKs (Realtime Database) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
